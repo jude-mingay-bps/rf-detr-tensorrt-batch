@@ -4,14 +4,33 @@
 # Licensed under the Apache License, Version 2.0 [see LICENSE for details]
 # ------------------------------------------------------------------------
 
-import pytest
 import torch
 
 from rfdetr.models.lwdetr import SetCriterion
 from rfdetr.models.matcher import HungarianMatcher
 
 
-def _make_criterion(depth=True, focal_length=800.0, ball_ids=None):
+def _make_criterion(
+    depth: bool = True,
+    focal_length: float = 800.0,
+    ball_ids: list[int] | None = None,
+) -> SetCriterion:
+    """Build a small criterion for depth-loss unit tests.
+
+    Args:
+        depth: Whether to register depth-specific losses.
+        focal_length: Camera focal length used by the pinhole loss.
+        ball_ids: Class IDs treated as balls by the pinhole loss.
+
+    Returns:
+        Criterion configured for three synthetic classes.
+
+    Examples:
+        >>> "depth" in _make_criterion().losses
+        True
+        >>> "depth" in _make_criterion(depth=False).losses
+        False
+    """
     if ball_ids is None:
         ball_ids = [0]
     matcher = HungarianMatcher(cost_class=2, cost_bbox=5, cost_giou=2)
@@ -43,11 +62,11 @@ class TestDepthDistillLoss:
     def test_depth_distill_loss_nonzero(self):
         """loss_depth should compute SmoothL1 between pred_depth and target depth."""
         criterion = _make_criterion()
-        B, Q = 1, 10
+        batch_size, num_queries = 1, 10
         outputs = {
-            "pred_logits": torch.randn(B, Q, 3),
-            "pred_boxes": torch.rand(B, Q, 4).sigmoid(),
-            "pred_depth": torch.ones(B, Q, 1) * 50.0,
+            "pred_logits": torch.randn(batch_size, num_queries, 3),
+            "pred_boxes": torch.rand(batch_size, num_queries, 4).sigmoid(),
+            "pred_depth": torch.ones(batch_size, num_queries, 1) * 50.0,
         }
         targets = [
             {
@@ -65,11 +84,11 @@ class TestPinholeLoss:
     def test_pinhole_loss_zero_when_no_balls(self):
         """Pinhole loss should be zero when no ball classes are matched."""
         criterion = _make_criterion(ball_ids=[99])  # non-existent class
-        B, Q = 1, 10
+        batch_size, num_queries = 1, 10
         outputs = {
-            "pred_logits": torch.randn(B, Q, 3),
-            "pred_boxes": torch.rand(B, Q, 4).sigmoid(),
-            "pred_depth": torch.ones(B, Q, 1) * 50.0,
+            "pred_logits": torch.randn(batch_size, num_queries, 3),
+            "pred_boxes": torch.rand(batch_size, num_queries, 4).sigmoid(),
+            "pred_depth": torch.ones(batch_size, num_queries, 1) * 50.0,
         }
         targets = [
             {
@@ -87,10 +106,10 @@ class TestNoDepthLosses:
     def test_no_depth_losses_when_disabled(self):
         """SetCriterion without depth losses should work normally."""
         criterion = _make_criterion(depth=False)
-        B, Q = 1, 10
+        batch_size, num_queries = 1, 10
         outputs = {
-            "pred_logits": torch.randn(B, Q, 3),
-            "pred_boxes": torch.rand(B, Q, 4).sigmoid(),
+            "pred_logits": torch.randn(batch_size, num_queries, 3),
+            "pred_boxes": torch.rand(batch_size, num_queries, 4).sigmoid(),
         }
         targets = [
             {

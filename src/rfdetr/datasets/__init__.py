@@ -14,20 +14,24 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # ------------------------------------------------------------------------
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-import torch.utils.data
 import torchvision
+from torch.utils.data import Dataset, Subset
 
+from rfdetr.datasets._keypoint_schema import infer_coco_keypoint_schema as infer_coco_keypoint_schema
+from rfdetr.datasets._keypoint_schema import infer_yolo_keypoint_schema as infer_yolo_keypoint_schema
 from rfdetr.datasets.coco import build_coco, build_roboflow_from_coco
 from rfdetr.datasets.o365 import build_o365
 from rfdetr.datasets.yolo import YoloDetection, build_roboflow_from_yolo
 
 
-def get_coco_api_from_dataset(dataset: torch.utils.data.Dataset) -> Optional[Any]:
+def get_coco_api_from_dataset(dataset: Dataset[Any]) -> Any | None:
     for _ in range(10):
-        if isinstance(dataset, torch.utils.data.Subset):
+        if isinstance(dataset, Subset):
             dataset = dataset.dataset
     if isinstance(dataset, torchvision.datasets.CocoDetection):
         return dataset.coco
@@ -67,14 +71,13 @@ def detect_roboflow_format(dataset_dir: Path) -> str:
     )
 
 
-def build_roboflow(image_set: str, args: Any, resolution: int) -> torch.utils.data.Dataset:
+def build_roboflow(image_set: str, args: Any, resolution: int) -> Dataset[Any]:
     """Build a Roboflow dataset, auto-detecting COCO or YOLO format.
 
-    This function detects the dataset format and delegates to the
-    appropriate builder function.
+    This function detects the dataset format and delegates to the appropriate builder function.
     """
     root = Path(args.dataset_dir)
-    assert root.exists(), f'provided Roboflow path {root} does not exist'
+    assert root.exists(), f"provided Roboflow path {root} does not exist"
 
     dataset_format = detect_roboflow_format(root)
 
@@ -83,13 +86,13 @@ def build_roboflow(image_set: str, args: Any, resolution: int) -> torch.utils.da
     return build_roboflow_from_yolo(image_set, args, resolution)
 
 
-def build_dataset(image_set: str, args: Any, resolution: int) -> torch.utils.data.Dataset:
-    if args.dataset_file == 'coco':
+def build_dataset(image_set: str, args: Any, resolution: int) -> Dataset[Any]:
+    if args.dataset_file == "coco":
         return build_coco(image_set, args, resolution)
-    if args.dataset_file == 'o365':
+    if args.dataset_file == "o365":
         return build_o365(image_set, args, resolution)
-    if args.dataset_file == 'roboflow':
+    if args.dataset_file == "roboflow":
         return build_roboflow(image_set, args, resolution)
-    if args.dataset_file == 'yolo':
+    if args.dataset_file == "yolo":
         return build_roboflow_from_yolo(image_set, args, resolution)
-    raise ValueError(f'dataset {args.dataset_file} not supported')
+    raise ValueError(f"dataset {args.dataset_file} not supported")

@@ -1,3 +1,7 @@
+---
+description: Run RF-DETR object detection on images, video, and streams. Nano to 2XLarge models with 2.3-17.2 ms latency and up to 60.1 AP on COCO.
+---
+
 # Run an RF-DETR Object Detection Model
 
 RF-DETR is a real-time transformer architecture for object detection, built on a DINOv2 vision transformer backbone. The base models are trained on the Microsoft COCO dataset and achieve state-of-the-art accuracy and latency trade-offs.
@@ -24,20 +28,17 @@ Perform inference on an image using either the `rfdetr` package or the `inferenc
 === "rfdetr"
 
     ```python
-    import requests
     import supervision as sv
-    from PIL import Image
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
-    image = Image.open(requests.get("https://media.roboflow.com/dog.jpg", stream=True).raw)
-    detections = model.predict(image, threshold=0.5)
+    detections = model.predict("https://media.roboflow.com/dog.jpg", threshold=0.5)
 
     labels = [f"{COCO_CLASSES[class_id]}" for class_id in detections.class_id]
 
-    annotated_image = sv.BoxAnnotator().annotate(image, detections)
+    annotated_image = sv.BoxAnnotator().annotate(detections.metadata["source_image"], detections)
     annotated_image = sv.LabelAnnotator().annotate(annotated_image, detections, labels)
     ```
 
@@ -59,6 +60,16 @@ Perform inference on an image using either the `rfdetr` package or the `inferenc
     annotated_image = sv.LabelAnnotator().annotate(annotated_image, detections)
     ```
 
+!!! note "Using COCO classes vs. fine-tuned model classes"
+
+    `COCO_CLASSES` works for COCO-pretrained models (80 COCO classes, indexed 0-79). For fine-tuned models, use `detections.data["class_name"]` instead — it resolves class names from the checkpoint and works for both COCO and custom datasets.
+
+For memory-constrained inference-only deployments with the `rfdetr` package, optimize the loaded model in place before calling `predict()`. Pass `dtype="float16"` to halve weight memory in addition to clearing the base model reference. This operation is irreversible — to restore the original model, create a new `RFDETR` instance:
+
+```python
+model.inference(compile=False, inplace=True, dtype="float16")
+```
+
 ## Run on video, webcam, or RTSP stream
 
 These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>`, `<WEBCAM_INDEX>`, and `<RTSP_STREAM_URL>` with your inputs. `<WEBCAM_INDEX>` is usually `0` for the default camera.
@@ -69,7 +80,7 @@ These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>
     import cv2
     import supervision as sv
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
@@ -104,13 +115,14 @@ These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>
     import cv2
     import supervision as sv
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
-    video_capture = cv2.VideoCapture("<WEBCAM_INDEX>")
+    WEBCAM_INDEX = 0
+    video_capture = cv2.VideoCapture(WEBCAM_INDEX)
     if not video_capture.isOpened():
-        raise RuntimeError("Failed to open webcam: <WEBCAM_INDEX>")
+        raise RuntimeError(f"Failed to open webcam: {WEBCAM_INDEX}")
 
     while True:
         success, frame_bgr = video_capture.read()
@@ -139,7 +151,7 @@ These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>
     import cv2
     import supervision as sv
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
