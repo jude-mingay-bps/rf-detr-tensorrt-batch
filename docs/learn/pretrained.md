@@ -1,4 +1,8 @@
-You can run any of the four supported RF-DETR base models -- Nano, Small, Medium, Large -- with [Inference](https://github.com/roboflow/inference), an open source computer vision inference server. The base models are trained on the [Microsoft COCO dataset](https://universe.roboflow.com/microsoft/coco).
+---
+description: Run pre-trained RF-DETR models (Nano to 2XLarge) on images, video, webcam, and RTSP streams. COCO-trained with real-time DINOv2 backbone.
+---
+
+You can run any of the four supported RF-DETR base models -- Nano, Small, Medium, Large -- with [Inference](https://github.com/roboflow/inference), an open source computer vision inference server. The base models are trained on the [Microsoft COCO dataset](https://universe.roboflow.com/microsoft/coco). XLarge and 2XLarge detection models are also available via `pip install rfdetr[plus]` and are provided under the PML 1.0 license.
 
 === "Run on an Image"
 
@@ -46,7 +50,7 @@ You can run any of the four supported RF-DETR base models -- Nano, Small, Medium
     ```python
     import supervision as sv
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
@@ -82,7 +86,7 @@ You can run any of the four supported RF-DETR base models -- Nano, Small, Medium
     import cv2
     import supervision as sv
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
@@ -120,7 +124,7 @@ You can run any of the four supported RF-DETR base models -- Nano, Small, Medium
     import cv2
     import supervision as sv
     from rfdetr import RFDETRMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRMedium()
 
@@ -150,7 +154,7 @@ You can run any of the four supported RF-DETR base models -- Nano, Small, Medium
     cv2.destroyAllWindows()
     ```
 
-You can change the RF-DETR model that the code snippet above uses. To do so, update `rfdetr-base` to any of the following values:
+You can change the RF-DETR model that the code snippet above uses. To do so, update `rfdetr-small` to any of the following values:
 
 - `rfdetr-nano`
 - `rfdetr-small`
@@ -167,7 +171,7 @@ import requests
 import supervision as sv
 from PIL import Image
 from rfdetr import RFDETRMedium
-from rfdetr.util.coco_classes import COCO_CLASSES
+from rfdetr.assets.coco_classes import COCO_CLASSES
 
 model = RFDETRMedium()
 

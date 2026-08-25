@@ -4,7 +4,6 @@
 # Licensed under the Apache License, Version 2.0 [see LICENSE for details]
 # ------------------------------------------------------------------------
 
-import pytest
 import torch
 from torch import nn
 
@@ -43,9 +42,7 @@ class TestLWDETRDepthHead:
             num_queries=10,
             depth_head=False,
         )
-        assert not hasattr(model, "depth_embed"), (
-            "depth_embed should not exist when depth_head=False"
-        )
+        assert not hasattr(model, "depth_embed"), "depth_embed should not exist when depth_head=False"
 
 
 class TestPostProcessDepth:
@@ -54,11 +51,11 @@ class TestPostProcessDepth:
         from rfdetr.models.lwdetr import PostProcess
 
         pp = PostProcess(num_select=5)
-        B, Q, C = 2, 10, 3
+        batch_size, num_queries, num_classes = 2, 10, 3
         outputs = {
-            "pred_logits": torch.randn(B, Q, C),
-            "pred_boxes": torch.rand(B, Q, 4),
-            "pred_depth": torch.rand(B, Q, 1) * 100,
+            "pred_logits": torch.randn(batch_size, num_queries, num_classes),
+            "pred_boxes": torch.rand(batch_size, num_queries, 4),
+            "pred_depth": torch.rand(batch_size, num_queries, 1) * 100,
         }
         target_sizes = torch.tensor([[640, 640], [640, 640]])
         results = pp(outputs, target_sizes)
@@ -70,72 +67,25 @@ class TestPostProcessDepth:
         from rfdetr.models.lwdetr import PostProcess
 
         pp = PostProcess(num_select=5)
-        B, Q, C = 2, 10, 3
+        batch_size, num_queries, num_classes = 2, 10, 3
         outputs = {
-            "pred_logits": torch.randn(B, Q, C),
-            "pred_boxes": torch.rand(B, Q, 4),
+            "pred_logits": torch.randn(batch_size, num_queries, num_classes),
+            "pred_boxes": torch.rand(batch_size, num_queries, 4),
         }
         target_sizes = torch.tensor([[640, 640], [640, 640]])
         results = pp(outputs, target_sizes)
         assert "depth" not in results[0]
 
 
-class TestPredictDepthTupleUnpacking:
-    def test_depth_tuple_unpacking(self):
-        """When forward_export returns 3-tuple with depth_head=True, pred_depth should be set."""
-        from types import SimpleNamespace
+class TestDepthNamespace:
+    def test_namespace_includes_depth_params(self):
+        """The config bridge should expose every depth builder parameter."""
+        from rfdetr._namespace import _namespace_from_configs
+        from rfdetr.config import RFDETRNanoConfig, TrainConfig
 
-        config = SimpleNamespace(depth_head=True)
-        predictions = (
-            torch.rand(1, 10, 4),   # pred_boxes
-            torch.randn(1, 10, 80), # pred_logits
-            torch.rand(1, 10, 1) * 100,  # pred_depth
-        )
-        # Simulate the tuple unpacking logic from detr.py
-        return_predictions = {
-            "pred_logits": predictions[1],
-            "pred_boxes": predictions[0],
-        }
-        if len(predictions) == 3:
-            if getattr(config, 'depth_head', False):
-                return_predictions["pred_depth"] = predictions[2]
-            else:
-                return_predictions["pred_masks"] = predictions[2]
-
-        assert "pred_depth" in return_predictions
-        assert "pred_masks" not in return_predictions
-        assert return_predictions["pred_depth"].shape == (1, 10, 1)
-
-    def test_no_depth_tuple_unpacking_when_disabled(self):
-        """When depth_head=False, 3-tuple should set pred_masks not pred_depth."""
-        from types import SimpleNamespace
-
-        config = SimpleNamespace(depth_head=False)
-        predictions = (
-            torch.rand(1, 10, 4),
-            torch.randn(1, 10, 80),
-            torch.rand(1, 10, 1),  # this would be masks
-        )
-        return_predictions = {
-            "pred_logits": predictions[1],
-            "pred_boxes": predictions[0],
-        }
-        if len(predictions) == 3:
-            if getattr(config, 'depth_head', False):
-                return_predictions["pred_depth"] = predictions[2]
-            else:
-                return_predictions["pred_masks"] = predictions[2]
-
-        assert "pred_masks" in return_predictions
-        assert "pred_depth" not in return_predictions
-
-
-class TestPopulateArgsDepth:
-    def test_populate_args_includes_depth_params(self):
-        """populate_args should include depth-related parameters."""
-        from rfdetr.main import populate_args
-
-        args = populate_args(depth_head=True, z_max=80.0, ball_class_ids=[0, 1])
+        model_config = RFDETRNanoConfig(pretrain_weights="custom-depth.pth", depth_head=True, z_max=80.0)
+        train_config = TrainConfig(dataset_dir="/tmp", ball_class_ids=[0, 1])
+        args = _namespace_from_configs(model_config, train_config)
         assert args.depth_head is True
         assert args.z_max == 80.0
         assert args.depth_loss_coef == 5.0
@@ -143,36 +93,63 @@ class TestPopulateArgsDepth:
         assert args.ball_class_ids == [0, 1]
         assert args.curriculum_phase1_epochs == 10
 
-    def test_populate_args_depth_defaults(self):
-        """populate_args should default depth_head to False."""
-        from rfdetr.main import populate_args
+    def test_namespace_depth_defaults_are_disabled(self):
+        """Detection-only configs must not construct or export a depth output."""
+        from rfdetr._namespace import _namespace_from_configs
+        from rfdetr.config import RFDETRNanoConfig, TrainConfig
 
-        args = populate_args()
+        args = _namespace_from_configs(RFDETRNanoConfig(), TrainConfig(dataset_dir="/tmp"))
         assert args.depth_head is False
         assert args.z_max == 120.0
         assert args.ball_class_ids == []
 
 
 class _MockBackbone(nn.Module):
-    def __init__(self, dim):
+    """Minimal backbone implementing the shape contract used by ``LWDETR``.
+
+    Examples:
+        >>> _MockBackbone(4).dummy.in_features
+        4
+    """
+
+    def __init__(self, dim: int) -> None:
+        """Create a single dummy projection with the requested feature width."""
         super().__init__()
         self.dummy = nn.Linear(dim, dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
+        """Return the empty feature lists needed by construction-only tests."""
         return [], []
 
 
 class _MockTransformer(nn.Module):
-    def __init__(self, dim):
+    """Minimal transformer exposing the fields consumed by ``LWDETR``.
+
+    Examples:
+        >>> _MockTransformer(4).d_model
+        4
+    """
+
+    def __init__(self, dim: int) -> None:
+        """Create a mock transformer with the requested model width."""
         super().__init__()
         self.d_model = dim
         self.decoder = _MockDecoder()
 
-    def forward(self, *args, **kwargs):
+    def forward(self, *args: object, **kwargs: object) -> tuple[None, None, None, None]:
+        """Return placeholder decoder outputs for construction-only tests."""
         return None, None, None, None
 
 
 class _MockDecoder(nn.Module):
-    def __init__(self):
+    """Decoder stub carrying the bbox-head attachment point.
+
+    Examples:
+        >>> _MockDecoder().bbox_embed is None
+        True
+    """
+
+    def __init__(self) -> None:
+        """Initialize the bbox-head attachment point."""
         super().__init__()
         self.bbox_embed = None

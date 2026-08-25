@@ -1,3 +1,7 @@
+---
+description: Run RF-DETR instance segmentation on images, video, and streams. Mask predictions with 3.4-21.8 ms latency using DINOv2 backbone.
+---
+
 # Run an RF-DETR Instance Segmentation Model
 
 RF-DETR is a real-time transformer architecture for instance segmentation, built on a DINOv2 vision transformer backbone. The base models are trained on the Microsoft COCO dataset and achieve strong accuracy and latency trade-offs.
@@ -22,20 +26,17 @@ Perform inference on an image using either the `rfdetr` package or the `inferenc
 === "rfdetr"
 
     ```python
-    import requests
     import supervision as sv
-    from PIL import Image
     from rfdetr import RFDETRSegMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRSegMedium()
 
-    image = Image.open(requests.get("https://media.roboflow.com/dog.jpg", stream=True).raw)
-    detections = model.predict(image, threshold=0.5)
+    detections = model.predict("https://media.roboflow.com/dog.jpg", threshold=0.5)
 
     labels = [f"{COCO_CLASSES[class_id]}" for class_id in detections.class_id]
 
-    annotated_image = sv.MaskAnnotator().annotate(image, detections)
+    annotated_image = sv.MaskAnnotator().annotate(detections.metadata["source_image"], detections)
     annotated_image = sv.LabelAnnotator().annotate(annotated_image, detections, labels)
     ```
 
@@ -57,6 +58,12 @@ Perform inference on an image using either the `rfdetr` package or the `inferenc
     annotated_image = sv.LabelAnnotator().annotate(annotated_image, detections)
     ```
 
+For memory-constrained inference-only deployments with the `rfdetr` package, optimize the loaded model in place before calling `predict()`. Pass `dtype="float16"` to halve weight memory in addition to clearing the base model reference. This operation is irreversible — to restore the original model, create a new `RFDETR` instance:
+
+```python
+model.inference(compile=False, inplace=True, dtype="float16")
+```
+
 ## Run on video, webcam, or RTSP stream
 
 These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>`, `<WEBCAM_INDEX>`, and `<RTSP_STREAM_URL>` with your inputs. `<WEBCAM_INDEX>` is usually `0` for the default camera.
@@ -67,7 +74,7 @@ These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>
     import cv2
     import supervision as sv
     from rfdetr import RFDETRSegMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRSegMedium()
 
@@ -102,7 +109,7 @@ These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>
     import cv2
     import supervision as sv
     from rfdetr import RFDETRSegMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRSegMedium()
 
@@ -138,7 +145,7 @@ These examples use OpenCV for decoding and display. Replace `<SOURCE_VIDEO_PATH>
     import cv2
     import supervision as sv
     from rfdetr import RFDETRSegMedium
-    from rfdetr.util.coco_classes import COCO_CLASSES
+    from rfdetr.assets.coco_classes import COCO_CLASSES
 
     model = RFDETRSegMedium()
 
