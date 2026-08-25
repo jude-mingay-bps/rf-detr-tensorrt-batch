@@ -119,7 +119,10 @@ class PostProcess(nn.Module):
         """
         optional_heads = [head for head in (out_masks, out_keypoints, out_depth) if head is not None]
         if len(optional_heads) > 1:
-            raise ValueError("masks, keypoints, and depth are mutually exclusive in postprocessing.")
+            raise ValueError(
+                "masks, keypoints, and depth cannot be used together; "
+                "they are mutually exclusive in postprocessing."
+            )
         assert len(out_logits) == len(target_sizes)
         if out_depth is not None:
             assert len(out_depth) == len(target_sizes)
