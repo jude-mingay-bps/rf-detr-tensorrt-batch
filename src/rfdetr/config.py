@@ -1146,6 +1146,9 @@ class TrainConfig(BaseConfig):
     progress_bar: Literal["tqdm", "rich"] | None = None  # Progress bar style: "rich", "tqdm", or None to disable.
     tensorboard: bool = True
     wandb: bool = False
+    # Consolidate Lightning's LR, train, and validation emissions into one
+    # 1-based W&B history row per completed epoch. CSV/TensorBoard are unchanged.
+    wandb_log_per_epoch: bool = False
     mlflow: bool = False
     clearml: bool = False  # Not yet implemented — reserved for future use.
     project: str | None = None
