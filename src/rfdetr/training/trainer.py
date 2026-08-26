@@ -37,6 +37,7 @@ from rfdetr.training.callbacks import (
     RFDETREMACallback,
 )
 from rfdetr.training.callbacks.coco_eval import COCOEvalCallback
+from rfdetr.training.epoch_wandb_logger import EpochWandbLogger
 from rfdetr.utilities.logger import get_logger
 
 _logger = get_logger()
@@ -406,8 +407,9 @@ def _append_training_callbacks(
 
     if tc.wandb:
         try:
+            wandb_logger = EpochWandbLogger if tc.wandb_log_per_epoch else WandbLogger
             loggers.append(
-                WandbLogger(
+                wandb_logger(
                     name=tc.run,
                     project=tc.project,
                     save_dir=tc.output_dir,

@@ -110,6 +110,7 @@ model.train(
     lr=1e-4,
     output_dir="output",
     wandb=True,
+    wandb_log_per_epoch=True,
     project="my-detection-project",
     run="experiment-001",
 )
@@ -117,12 +118,19 @@ model.train(
 
 ### Configuration
 
-| Parameter | Description                             |
-| --------- | --------------------------------------- |
-| `project` | Groups related experiments together     |
-| `run`     | Identifies individual training sessions |
+| Parameter             | Description                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `project`             | Groups related experiments together                                                          |
+| `run`                 | Identifies individual training sessions                                                      |
+| `wandb_log_per_epoch` | Writes one consolidated, 1-based W&B history row per completed epoch instead of per emission |
 
 If you don't specify a run name, W&B assigns a random one automatically.
+
+`wandb_log_per_epoch` defaults to `False` for backwards compatibility. When
+enabled, W&B uses `epoch` as the chart x-axis and stores the final learning-rate
+sample, training losses, and validation metrics together. A completed epoch is
+committed when the next epoch starts; the final epoch is committed when the
+trainer finalizes. CSV and TensorBoard logging are unchanged.
 
 ### Features
 

@@ -24,6 +24,7 @@ from rfdetr.training.callbacks.best_model import BestModelCallback, RFDETREarlyS
 from rfdetr.training.callbacks.coco_eval import COCOEvalCallback
 from rfdetr.training.callbacks.drop_schedule import DropPathCallback
 from rfdetr.training.callbacks.ema import RFDETREMACallback
+from rfdetr.training.epoch_wandb_logger import EpochWandbLogger
 from rfdetr.training.trainer import _ForceLastEpochValidationCallback
 
 
@@ -970,6 +971,23 @@ class TestBuildTrainerLoggers:
         with mock.patch("rfdetr.training.trainer.WandbLogger", return_value=fake_logger):
             trainer = build_trainer(
                 _tc(tmp_path, wandb=True, use_ema=False),
+                _mc(),
+            )
+        assert fake_logger in trainer.loggers
+
+    def test_epoch_wandb_logger_wired_when_requested(self, tmp_path):
+        """EpochWandbLogger is opt-in so existing W&B behavior remains compatible."""
+        import unittest.mock as mock
+
+        fake_logger = mock.MagicMock(spec=EpochWandbLogger)
+        with mock.patch("rfdetr.training.trainer.EpochWandbLogger", return_value=fake_logger):
+            trainer = build_trainer(
+                _tc(
+                    tmp_path,
+                    wandb=True,
+                    wandb_log_per_epoch=True,
+                    use_ema=False,
+                ),
                 _mc(),
             )
         assert fake_logger in trainer.loggers
